@@ -1,0 +1,234 @@
+---
+title: "web_scraping"
+format: html
+editor: visual
+---
+
+## Prueba de permiso
+
+```{r}
+install.packages(c("robotstxt","rvest","httr","tidyverse","tidytext","syuzhet","stringr"))
+```
+
+```{r}
+install.packages(c("robotstxt"))
+```
+
+```{r}
+install.packages(c("rvest"))
+```
+
+```{r}
+install.packages(c("httr"))
+```
+
+```{r}
+install.packages(c("tidytext"))
+```
+
+```{r}
+install.packages(c("syuzhet"))
+```
+
+```{r}
+install.packages(c("tidyverse"))
+```
+
+```{r}
+install.packages(c("stringr"))
+```
+
+```{r}
+library(robotstxt)
+```
+
+```{r}
+
+domain <- "https://www.yourghoststories.com"
+```
+
+```{r}
+# 1. Obtener el robots.txt y decir si nos permite acceder a la raíz y a la pagina
+robots <- robotstxt(domain)
+print(robots)  
+```
+
+```{r}
+# Comprueba rutas concretas
+paths <- c("/", "/ghost-stories-chronological.php", "/real-ghost-story.php?story=9147") 
+allowed <- sapply(paths, function(p) paths_allowed(paths = p, domain = domain))
+data.frame(path = paths, allowed = allowed)
+```
+
+```{r}
+library(rvest)
+library(dplyr)
+library(stringr)
+
+# URL de la página
+url <- "https://www.yourghoststories.com/real-ghost-stories.php"
+
+# Leer el HTML
+page <- read_html(url)
+
+# Extraer todos los bloques de historias
+stories <- page %>% html_nodes(".rowlight, .rowdark")
+
+# Títulos (en <strong>)
+titles <- stories %>%
+  html_node("strong") %>%
+  html_text(trim = TRUE)
+
+# Descripciones (los <p>)
+descriptions <- stories %>%
+  html_nodes("p") %>%
+  html_text(trim = TRUE)
+
+# Juntar en un dataframe inicial
+data <- data.frame(
+  titulo = titles,
+  descripcion = descriptions,
+  stringsAsFactors = FALSE
+)
+
+# Extraer posible lugar (ejemplo simple)
+data$lugar <- str_extract(data$descripcion, "(?i)(?<=I live in )[A-Za-z ]+|(?<=in )[A-Za-z ]+")
+
+# Extraer posible tipo de evento (buscando palabras clave)
+data$tipo_evento <- case_when(
+  str_detect(data$descripcion, regex("ghost|spirit|apparition", ignore_case = TRUE)) ~ "Ghost sighting",
+  str_detect(data$descripcion, regex("dream|sleep|nightmare", ignore_case = TRUE)) ~ "Dream/Paranormal dream",
+  str_detect(data$descripcion, regex("shadow", ignore_case = TRUE)) ~ "Shadow figure",
+  str_detect(data$descripcion, regex("possession|demon", ignore_case = TRUE)) ~ "Possession/Demonic",
+  TRUE ~ "Otro/Indeterminado"
+)
+
+# Mostrar primeras filas
+print(head(data, 5))
+
+```
+
+```{r}
+print(head(data, 10))
+```
+
+```{r}
+write.csv(data, "data.csv", row.names = FALSE)
+```
+
+```{r}
+
+library(rvest)
+library(dplyr)
+library(purrr)
+library(stringr)
+library(httr)
+library(readr)
+```
+
+```{r}
+# Función para scrapear historias
+scrape_stories <- function(url, categoria, lugar, max_pages = 50, delay = 1){
+  all_stories <- list()
+  
+  for(page in 1:max_pages){
+    page_url <- str_replace(url, "page=1", paste0("page=", page))
+    
+    page_html <- tryCatch(
+      read_html(GET(page_url, user_agent("Mozilla/5.0"))),
+      error = function(e) NULL
+    )
+    
+    if(is.null(page_html)) break
+    
+    stories_nodes <- page_html %>% html_elements(".rowlight, .rowdark")
+    if(length(stories_nodes) == 0) break
+    
+    titles <- stories_nodes %>% html_node("strong") %>% html_text(trim = TRUE)
+    descs <- stories_nodes %>% html_nodes("p") %>% html_text(trim = TRUE)
+    
+    descs <- descs[seq(2, length(descs), 2)]
+    
+    df_page <- tibble(
+      titulo = titles,
+      descripcion = descs,
+      categoria = categoria,
+      lugar = lugar
+    )
+    
+    all_stories[[page]] <- df_page
+    
+    # Guardar progresivamente
+    df_save <- bind_rows(all_stories)
+    write_csv(df_save, "paranormal_stories_temp.csv")
+    
+    Sys.sleep(delay)
+  }
+  
+  bind_rows(all_stories)
+}
+
+
+# Obtener lista de estados
+
+base_url <- "https://www.yourghoststories.com/real-ghost-stories.php"
+page_index <- read_html(GET(base_url, user_agent("Mozilla/5.0")))
+
+state_links <- page_index %>%
+  html_elements("div.column_layout div.three_column_layout_col ul.listresults a") %>%
+  html_attr("href")
+
+state_names <- page_index %>%
+  html_elements("div.column_layout div.three_column_layout_col ul.listresults a") %>%
+  html_text(trim = TRUE)
+
+states <- tibble(
+  estado = state_names,
+  url = paste0("https://www.yourghoststories.com", state_links)
+) %>%
+  filter(str_detect(url, "usstates")) # Solo los estados de EUA 
+
+
+# Obtener lista de categorías
+
+cat_links <- page_index %>%
+  html_elements("h2 + ul.listresults a, div.two_column_layout_col ul.listresults a") %>%
+  html_attr("href")
+
+cat_names <- page_index %>%
+  html_elements("h2 + ul.listresults a, div.two_column_layout_col ul.listresults a") %>%
+  html_text(trim = TRUE)
+
+categories <- tibble(
+  categoria = cat_names,
+  url = paste0("https://www.yourghoststories.com", cat_links)
+)
+
+# Scrapear combinación Estado + Categoría
+
+all_data <- list()
+
+for(s in 1:nrow(states)){
+  estado_name <- states$estado[s]
+  estado_url <- states$url[s]
+  
+  message("Scraping estado: ", estado_name)
+  
+  # Para cada estado, recorremos todas las categorías
+  for(c in 1:nrow(categories)){
+    cat_name <- categories$categoria[c]
+    
+    df_tmp <- scrape_stories(estado_url, categoria = cat_name, lugar = estado_name, max_pages = 50, delay = 1)
+    
+    if(nrow(df_tmp) > 0){
+      all_data[[paste0(estado_name, "_", cat_name)]] <- df_tmp
+    }
+  }
+}
+
+# Guardar todos los datos en csv 
+df_final <- bind_rows(all_data)
+write_csv(df_final, "paranormal_stories_final.csv")
+
+
+```
