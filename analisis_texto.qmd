@@ -1,0 +1,128 @@
+---
+title: "analisis_texto"
+format: html
+editor: visual
+---
+
+```{r}
+library(readr)
+library(dplyr)
+library(tidyr)
+library(tidytext)
+library(stringr)
+
+# Cargar datos
+stories <- read_csv("paranormal_stories_final.csv")
+
+glimpse(stories)
+
+```
+
+### 
+
+```{r}
+# tikenizar 
+#convierte cada histria en palabras individuales 
+stories_tokens <- stories %>%
+  unnest_tokens(word, descripcion)
+
+head(stories_tokens)
+```
+
+```{r}
+# elimina artñiculos y preposiciones
+data("stop_words")
+
+stories_clean <- stories_tokens %>%
+  anti_join(stop_words, by = "word") %>%
+  filter(!str_detect(word, "^[0-9]+$")) # quitar números
+
+```
+
+```{r}
+# busca las palabras mas frecuentes
+stories_clean %>%
+  count(word, sort = TRUE) %>%
+  top_n(20) %>%
+  mutate(word = reorder(word, n)) %>%
+  ggplot(aes(n, word)) +
+  geom_col(fill = "purple") +
+  labs(title = "Palabras más frecuentes en relatos paranormales")
+
+```
+
+```{r}
+# Frecuencias por categoría de fenónemo 
+stories_clean %>%
+  count(categoria, word, sort = TRUE) %>%
+  group_by(categoria) %>%
+  slice_max(n, n = 10) %>%
+  ungroup() %>%
+  ggplot(aes(n, reorder_within(word, n, categoria), fill = categoria)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~categoria, scales = "free") +
+  scale_y_reordered()
+  options(repr.plot.width = 20, repr.plot.height = 15) 
+
+
+```
+
+```{r}
+install.packages("textdata")
+
+```
+
+```{r}
+library(textdata)
+library(tidytext)
+```
+
+```{r}
+# análisis de sentimientos 
+
+# Diccionario NRC (emociones)
+nrc <- get_sentiments("nrc")
+
+# Diccionario Bing (positivo/negativo)
+bing <- get_sentiments("bing")
+
+```
+
+```{r}
+sentiment_nrc <- stories_clean %>%
+  inner_join(nrc, by = "word") %>%
+  count(categoria, sentiment, sort = TRUE)
+
+# Top emociones por categoría
+sentiment_nrc %>%
+  group_by(categoria) %>%
+  slice_max(n, n = 5) %>%
+  ggplot(aes(x = reorder_within(sentiment, n, categoria), y = n, fill = sentiment)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~categoria, scales = "free") +
+  scale_x_reordered() +
+  labs(title = "Emociones más frecuentes en relatos paranormales")
+
+```
+
+```{r}
+afinn <- get_sentiments("afinn")
+
+sentiment_afinn <- stories_clean %>%
+  inner_join(afinn, by = "word") %>%
+  group_by(titulo) %>%
+  summarise(afinn_score = sum(value))
+
+hist(sentiment_afinn$afinn_score, breaks = 30,
+     col = "purple", main = "Distribución de puntajes AFINN",
+     xlab = "Sentimiento (negativo a positivo)")
+
+```
+
+```{r}
+install.packages(c("tm"))
+```
+
+```{r}
+write_csv(stories_clean, "stories_clean.csv")
+```
