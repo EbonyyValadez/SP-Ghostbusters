@@ -34,7 +34,7 @@ word_counts <- stories_tokens %>%
   count(word, sort = TRUE)
 
 words_to_keep <- word_counts %>%
-  filter(n >= 5)
+  filter(n >= 10)
 
 stories_clean <- stories_tokens %>%
   semi_join(words_to_keep, by = "word")
@@ -50,14 +50,17 @@ stories_clean_id <- stories_clean %>%
              relationship = "many-to-many")
 
 # ==== 6. Construir DTM ====
-# Crear tabla de conteos documento–término
 doc_term <- stories_clean_id %>%
   count(row_id, word, name = "n")
-
-# Construir DTM dispersa
 dtm <- doc_term %>%
   cast_sparse(row_id, word, n)
 
+# Calcular la proporción de documentos donde aparece cada palabra
+dfreq <- Matrix::colSums(dtm > 0) / nrow(dtm)   # proporción
+keep_cols <- which(dfreq >= 0.01 & dfreq <= 0.8) # 1% a 80% de los relatos
+
+# Filtrar columnas de la matriz dispersa (solo palabras ni muy raras ni muy comunes)
+dtm <- dtm[, keep_cols, drop = FALSE]
 
 # ==== 7. Crear labels ====
 labels <- stories %>%
@@ -69,51 +72,65 @@ labels <- stories %>%
 cat("Filas de dtm:", nrow(dtm), "\n")
 cat("Longitud de labels:", length(labels), "\n")
 print(table(labels))
+```
 
+
+```{r}
 # ==== 8. Filtrar categorías poco representadas ====
 tab <- table(labels)
-keep_classes <- names(tab[tab >= 20])  # cambia el umbral si quieres
+keep_classes <- names(tab[tab >= 20])  
 keep_idx <- labels %in% keep_classes
 
-dtm_filt <- dtm[keep_idx, ]
-labels_filt <- factor(labels[keep_idx])
+tab <- sort(table(labels_filt), decreasing = TRUE)
+top_classes <- names(tab)[1:3] 
 
-cat("Dimensiones filtradas:", dim(dtm_filt), "\n")
-print(table(labels_filt))
+keep_idx_top <- labels_filt %in% top_classes
+dtm_top <- dtm_filt[keep_idx_top, , drop = FALSE]
+labels_top <- droplevels(labels_filt[keep_idx_top])
+
+cat("Clases seleccionadas:", paste(top_classes, collapse = ", "), "\n")
+cat("Dimensiones de dtm_top:", dim(dtm_top), "\n")
+print(table(labels_top))
 ```
 
+
+
 ```{r}
-# Train/Test Split y Multinomial NB
+#  TF-IDF 
+tfidf_transform <- function(m) {
+  doc_freq <- Matrix::colSums(m > 0)
+  idf <- log(nrow(m) / (doc_freq + 1))
+  tf <- m / Matrix::rowSums(m)
+  tfidf <- tf %*% Matrix::Diagonal(x = idf)
+  return(tfidf)
+}
+dtm_top_tfidf <- tfidf_transform(dtm_top)
+colnames(dtm_top_tfidf) <- colnames(dtm_top)
+```
+
+
+```{r}
+#Split train/test 
 library(tidymodels)
 set.seed(1234)
+df_lab <- data.frame(id = 1:length(labels_top), y = labels_top)
+split <- initial_split(df_lab, prop = 0.7, strata = y)
+train_idx <- training(split)$id
+test_idx  <- testing(split)$id
 
-split <- initial_split(data.frame(y = labels_filt), prop = 0.7)
-train_idx <- training(split) %>% rownames() %>% as.integer()
-test_idx  <- testing(split) %>% rownames() %>% as.integer()
+X_train <- dtm_top_tfidf[train_idx, ]
+X_test <- dtm_top_tfidf[test_idx, ]
+y_train <- labels_top[train_idx]
+y_test <- labels_top[test_idx]
 
-X_train <- dtm_filt[train_idx, ]
-X_test  <- dtm_filt[test_idx, ]
-y_train <- labels_filt[train_idx]
-y_test  <- labels_filt[test_idx]
-
-library(naivebayes)
 nb_model <- multinomial_naive_bayes(X_train, y_train, laplace = 1)
 y_pred <- predict(nb_model, X_test)
-
 cm <- table(Reference = y_test, Predicted = y_pred)
 cm
+
 ```
 
-```{r}
-table(y_train)
-table(y_test)
-dim(X_train)
-dim(X_test)
-```
 
-```{r}
-mean(X_train == 0)
-```
 
 ```{r}
 # Métricas multiclase
@@ -159,7 +176,7 @@ cm2
 ```
 
 ```{r}
-# ==== Dicotomizar clases ====
+# Dicotomizar clases 
 labels_bin <- dplyr::case_when(
   labels_filt == "Haunted Places" ~ "Haunted Places",
   TRUE ~ "Other"
@@ -177,7 +194,7 @@ y_test_bin  <- labels_bin[test_idx]
 ```
 
 ```{r}
-# ==== Multinomial NB binario ====
+#  Multinomial NB binario
 model_mult_bin <- multinomial_naive_bayes(X_train_bin, y_train_bin, laplace = 1)
 y_pred_mult <- predict(model_mult_bin, X_test_bin)
 cm_mult <- table(Reference = y_test_bin, Predicted = y_pred_mult)
@@ -200,3 +217,61 @@ recall_bin
 f1_bin
 
 ```
+
+
+```{r}
+# Naïve Bayes con distribución Poisson 
+X_train_dense <- as.matrix(X_train_bin)
+X_test_dense  <- as.matrix(X_test_bin)
+
+model_pois <- naive_bayes(x = X_train_dense, y = y_train_bin,
+                          laplace = 1, usepoisson = TRUE)
+y_pred_pois <- predict(model_pois, X_test_dense)
+
+cm_pois <- table(Reference = y_test_bin, Predicted = y_pred_pois)
+cm_pois
+
+```
+
+
+```{r}
+# Probar diferentes valores de Laplace
+for (lap in c(0.5, 1, 2, 3)) {
+  model_lap <- multinomial_naive_bayes(X_train_bin, y_train_bin, laplace = lap)
+  pred_lap <- predict(model_lap, X_test_bin)
+  cm_lap <- table(Reference = y_test_bin, Predicted = pred_lap)
+  acc_lap <- sum(diag(cm_lap))/sum(cm_lap)
+  cat("Laplace =", lap, "Accuracy =", acc_lap, "\n")
+}
+```
+
+
+```{r}
+# Cross-validation para Laplace 
+set.seed(123)
+K <- 5
+folds <- sample(rep(1:K, length.out = length(y_train_bin)))
+
+laps <- c(0.5, 1, 2, 3)
+cv_acc <- numeric(length(laps))
+
+for (j in seq_along(laps)) {
+  accs <- c()
+  for (k in 1:K) {
+    tr_idx <- which(folds != k)
+    te_idx <- which(folds == k)
+    model_cv <- multinomial_naive_bayes(X_train_bin[tr_idx, ], y_train_bin[tr_idx],
+                                        laplace = laps[j])
+    pred_cv <- predict(model_cv, X_train_bin[te_idx, ])
+    cm_cv <- table(Reference = y_train_bin[te_idx], Predicted = pred_cv)
+    accs[k] <- sum(diag(cm_cv))/sum(cm_cv)
+  }
+  cv_acc[j] <- mean(accs)
+}
+
+data.frame(Laplace = laps, CV_Accuracy = cv_acc)
+```
+
+
+
+
