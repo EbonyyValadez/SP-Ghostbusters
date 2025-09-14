@@ -44,6 +44,10 @@ format:
 
 # Introducción
 
+Para lograr un análisis automatizado de texto, es necesario incorporar técnicas de procesamiento de lenguaje natural (NLP), entendido como un campo que “se ocupa de cómo las computadoras entienden, procesan y manipulan los lenguajes humanos, utilizando métodos estadísticos, aprendizaje automático, redes neuronales y minería de texto” (Network of the National Library of Medicine, 2022). En este proyecto, dichas técnicas son aplicadas con el objetivo de clasificar relatos de fenómenos paranormales que fueron obtenidos mediante web scraping del portal Your Ghost Stories e incorporados a una base de datos.
+
+Con los textos recolectados se realizó una matriz basada en las frecuencias de las palabras para así llevar a cabo múltiples entrenamientos de modelos probabilísticos usando el clasificador Naïve Bayes que es de suma utilidad en tareas de minería de texto, así como también se implementaron variantes ajustadas con Laplace smoothing, distribución Poisson y validación cruzada. El objetivo principal del proyecto es predecir la categoría de cada relato con los datos y la base de datos planteada y así analizar cómo diferentes configuraciones del modelo de clasificación afectan el desempeño en escenarios multiclase y binarios y la manera en la que categoriza.
+
 # Metodología
 
 # Aplicación
@@ -53,3 +57,5 @@ format:
 # Conclusiones
 
 # Referencias
+
+National Network of Libraries of Medicine. (2022, junio). Natural language processing (NLP). NNLM Data Glossary. https://www.nnlm.gov/guides/data-glossary/natural-language-processing
