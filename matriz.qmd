@@ -5,6 +5,7 @@ editor: visual
 ---
 
 ## Matriz
+✏️ Construyan una sparse matrix que incluya la frecuencia de cada palabra en los relatos scrapeados, donde cada renglón representa un relato diferente y donde las columnas son las diferentes palabras. Esta matriz también debe contener el tipo de evento paranormal. La función unnest_tokens() les puede ayudar. Consideren eliminar las palabras comunes en inglés a través de las stop words. Todo este proceso se conoce como un count vectorizer, que significa transformar texto a vectores.
 
 ```{r}
 # ==== LIBRERÍAS ====
@@ -81,4 +82,79 @@ labels_filt <- factor(labels[keep_idx])
 cat("Dimensiones filtradas:", dim(dtm_filt), "\n")
 print(table(labels_filt))
 ```
+## Training and test
+✏️ Dividan la matriz de datos en training y test set. Y utilicen el training set para entrenar un clasificador naïve Bayes para predecir el tipo de evento paranormal.
+
+✏️ Reporten la accuracy, precision, recall, F1-score y matriz de confusión con sus respectivas interpretaciones.
+
+```{r}
+# ==== 1. Dividir en training y test set ====
+library(tidymodels)
+
+set.seed(1234)  # reproducibilidad
+split <- initial_split(data.frame(y = labels_filt), prop = 0.7)
+
+train_idx <- training(split) %>% rownames() %>% as.integer()
+test_idx  <- testing(split) %>% rownames() %>% as.integer()
+
+X_train <- dtm_filt[train_idx, ]
+X_test  <- dtm_filt[test_idx, ]
+y_train <- labels_filt[train_idx]
+y_test  <- labels_filt[test_idx]
+
+# ==== 2. Entrenar Naïve Bayes ====
+library(naivebayes)
+
+# Usamos multinomial_naive_bayes (ideal para texto)
+nb_model <- multinomial_naive_bayes(X_train, y_train, laplace = 1)
+
+# ==== 3. Predicciones en el test ====
+y_pred <- predict(nb_model, X_test)
+
+# ==== 4. Evaluar métricas ====
+library(yardstick)
+library(tibble)
+
+results <- tibble(
+  truth = factor(y_test),
+  estimate = factor(y_pred, levels = levels(y_test))
+  
+```
+
+```{r}
+acc = yardstick::accuracy(results, truth = truth, estimate = estimate)
+prec <- yardstick::precision(results, truth = truth, estimate = estimate, estimator = "macro_weighted")
+rec  <- yardstick::recall(results, truth = truth, estimate = estimate, estimator = "macro_weighted")
+f1   <- yardstick::f_meas(results, truth = truth, estimate = estimate, estimator = "macro_weighted")
+
+
+print(acc)
+print(prec)
+print(rec)
+print(f1)
+
+# ==== 5. Matriz de confusión ====
+cm <- table(Reference = y_test, Predicted = y_pred)
+print(cm)
+```
+El modelo está aprendiendo muy poco debido a que el dataset es demasiado grande y al haber mucho vocabulario y bastantes clases, el modelo falla en las categorías.
+
+## Uso de Naive Bayes
+✏️ Intenten utilizar la función naive_bayes() del paquete naivebayes para volver a ajustar su clasificador, ¿existe alguna diferencia?
+```{r}
+library(dplyr)
+
+# quedarte con las 1000 columnas más frecuentes
+col_sums <- Matrix::colSums(X_train)
+top_cols <- order(col_sums, decreasing = TRUE)[1:350]
+
+X_train_small <- as.data.frame(as.matrix(X_train[, top_cols]))
+X_test_small  <- as.data.frame(as.matrix(X_test[, top_cols]))
+
+model_nb2 <- naive_bayes(x = X_train_small, y = y_train, laplace = 1)
+y_pred2   <- predict(model_nb2, X_test_small)
+cm2 <- table(Reference = y_test, Predicted = y_pred2)
+print(cm2)
+```
+
 
