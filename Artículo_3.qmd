@@ -1,0 +1,55 @@
+---
+title: "Situación problema: Ghostbusters"
+author:
+  - name: "Jessica Dong"
+  - name: "Ebony Valadez"
+  - name: "Emiliano Guzmán"
+  - name: "Rafael Gutiérrez "
+date: today
+lang: es
+abstract: |
+ Aquí va el abstract
+keywords: ["keywords"]
+
+execute:
+  echo: false       
+  warning: false
+  message: false
+
+crossref:
+  fig-prefix: "Figura"
+  tbl-prefix: "Tabla"
+  eq-prefix: "Ecuación"
+
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    number-sections: true
+    theme: cosmo
+    code-fold: show
+    code-tools: true
+    df-print: paged
+    math: mathjax
+  pdf:
+    documentclass: article
+    toc: true
+    toc-depth: 3
+    number-sections: true
+    geometry: "margin=1in"
+    fig-cap-location: bottom
+    tbl-cap-location: top
+---
+
+
+# Introducción
+
+# Metodología
+
+# Aplicación
+
+# Resultados
+
+# Conclusiones
+
+# Referencias
