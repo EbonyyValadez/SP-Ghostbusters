@@ -1,0 +1,112 @@
+---
+title: "Situación problema: Ghostbusters"
+author:
+  - name: "Jessica Dong"
+  - name: "Ebony Valadez"
+  - name: "Emiliano Guzmán"
+  - name: "Rafael Gutiérrez "
+date: today
+lang: es
+abstract: |
+ Este proyecto implementa un clasificador Naïve Bayes para categorizar relatos de fenómenos paranormales recopilados de la plataforma Your Ghost Stories en internte. Se construyó una base de datos aplicando web scraping que incluye título, lugar, categoría y descripción de cada historia. Se llevó a cabo un procesamiento de los textos mediante un análisis del lenguaje natural y fueron representados en una matriz basada en la frecuencia de las palabras. Con estos datos se entrenaron y evaluaron clasificadores Naïve Bayes en diferentes escenarios, realizando ajustes de Laplace smoothing, distribución Poisson y validación cruzada. Se pretende que con los resultados sea posible simplificar la clasificación dentro del análisis de textos de manera automatizada, así como plantearlo con diversos enfoques de distintas área.
+keywords: ["web scrapping", "clasificador Naïve Bayes","Natural Language Processing", "modelado probabilístico"]
+
+execute:
+  echo: false       
+  warning: false
+  message: false
+
+crossref:
+  fig-prefix: "Figura"
+  tbl-prefix: "Tabla"
+  eq-prefix: "Ecuación"
+
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    number-sections: true
+    theme: cosmo
+    code-fold: show
+    code-tools: true
+    df-print: paged
+    math: mathjax
+  pdf:
+    documentclass: article
+    toc: true
+    toc-depth: 3
+    number-sections: true
+    geometry: "margin=1in"
+    fig-cap-location: bottom
+    tbl-cap-location: top
+---
+
+
+# Introducción
+
+Para lograr un análisis automatizado de texto, es necesario incorporar técnicas de procesamiento de lenguaje natural (NLP), entendido como un campo que “se ocupa de cómo las computadoras entienden, procesan y manipulan los lenguajes humanos, utilizando métodos estadísticos, aprendizaje automático, redes neuronales y minería de texto” (Network of the National Library of Medicine, 2022). En este proyecto, dichas técnicas son aplicadas con el objetivo de clasificar relatos de fenómenos paranormales que fueron obtenidos mediante web scraping del portal Your Ghost Stories e incorporados a una base de datos.
+
+Con los textos recolectados se realizó una matriz basada en las frecuencias de las palabras para así llevar a cabo múltiples entrenamientos de modelos probabilísticos usando el clasificador Naïve Bayes que es de suma utilidad en tareas de minería de texto, así como también se implementaron variantes ajustadas con Laplace smoothing, distribución Poisson y validación cruzada. El objetivo principal del proyecto es predecir la categoría de cada relato con los datos y la base de datos planteada y así analizar cómo diferentes configuraciones del modelo de clasificación afectan el desempeño en escenarios multiclase y binarios y la manera en la que categoriza.
+
+# Metodología
+
+## 1. Recolección de datos
+
+La información se obtuvo mediante **web scraping** del portal *Your Ghost Stories*, que concentra relatos de experiencias paranormales reportadas por usuarios en distintos contextos geográficos. Antes de la extracción se verificó el cumplimiento de las políticas del sitio utilizando el paquete `robotstxt` de R, comprobando que las rutas de interés estuvieran habilitadas para el acceso automatizado.
+
+La extracción se realizó con `rvest` y `httr`, identificando los elementos HTML que contienen el **título** y la **descripción** de cada historia. Para ampliar la cobertura, se implementó una función iterativa que recorrió múltiples páginas (con control de paginación) y combinó dimensiones nativas del sitio: **categorías temáticas** (p. ej., avistamientos, posesiones, figuras sombrías) y **ubicaciones** (p. ej., estados de EE. UU.). Se incluyó un retardo entre solicitudes (`delay`) y un encabezado de agente de usuario para un acceso respetuoso al servidor. El resultado de cada iteración se consolidó en un archivo `.csv`.
+
+## 2. Estructura del conjunto de datos
+
+El conjunto de datos final se estructuró con las siguientes variables mínimas:
+
+- `titulo`: encabezado del relato.
+- `descripcion`: texto principal del relato.
+- `categoria`: tipo de evento paranormal según taxonomía del sitio.
+- `lugar`: ubicación asociada al relato (cuando estuvo disponible).
+
+El dataset se almacenó en formato **CSV**, lo que facilita su posterior lectura y procesamiento reproducible en R.
+
+## 3. Procesamiento y limpieza de texto
+
+Para preparar el corpus, se utilizaron `tidytext`, `stringr`, `dplyr` y `tidyr`:
+
+1. **Tokenización**: transformación de la columna `descripcion` a unidades léxicas (palabras).
+2. **Depuración**: eliminación de *stopwords* (en inglés) y filtrado de tokens no informativos (p. ej., secuencias numéricas).
+3. **Normalización básica**: conversión a minúsculas y saneamiento ligero de caracteres, manteniendo la semántica original.
+
+Este preprocesamiento generó un corpus “limpio” apto para el análisis exploratorio y semántico.
+
+## 4. Análisis exploratorio de texto
+
+Se calcularon **frecuencias de palabras** a nivel global y por `categoria`, con el objetivo de identificar léxico recurrente y patrones narrativos. Las principales distribuciones se visualizaron mediante gráficos de barras (palabras más frecuentes en el total y top-k por categoría), lo que permitió contrastar temáticas y vocabulario dominante entre tipos de fenómenos.
+
+## 5. Análisis de sentimientos
+
+Para caracterizar la **carga emocional** del corpus se integraron tres lexicones:
+
+- **NRC**: asigna emociones básicas (p. ej., miedo, tristeza, alegría, sorpresa).
+- **Bing**: clasifica polaridad (positiva/negativa).
+- **AFINN**: asigna puntajes enteros de intensidad (negativa a positiva).
+
+La unión léxica (join por `word`) permitió:
+- Estimar la **distribución de emociones** por `categoria` (NRC).
+- Cuantificar la **polaridad** (Bing) y la **intensidad** global por relato (AFINN), obteniendo para este último una suma de puntajes por `titulo`.  
+Los resultados se representaron con gráficos de barras y un histograma de puntajes AFINN para explorar la dispersión afectiva entre historias.
+
+## 6. Limitaciones
+
+- La extracción depende de la **estructura HTML** del sitio; cambios en el marcado podrían requerir ajustes en los selectores.
+- La calidad de `lugar` y `categoria` está condicionada a la forma de publicación y a la **disponibilidad** de metadatos.
+- Los métodos léxicos de sentimientos (NRC, Bing, AFINN) no capturan **ironía, negación compleja** ni **dependencias contextuales**; por tanto, los resultados deben interpretarse como aproximaciones exploratorias.
+
+
+# Aplicación
+
+# Resultados
+
+# Conclusiones
+
+# Referencias
+
+National Network of Libraries of Medicine. (2022, junio). Natural language processing (NLP). NNLM Data Glossary. https://www.nnlm.gov/guides/data-glossary/natural-language-processing
