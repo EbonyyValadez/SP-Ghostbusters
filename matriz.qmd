@@ -1,0 +1,84 @@
+---
+title: "Matriz"
+format: html
+editor: visual
+---
+
+## Matriz
+
+```{r}
+# ==== LIBRERÍAS ====
+library(readr)
+library(dplyr)
+library(tidytext)
+library(stringr)
+library(Matrix)
+library(caret)
+library(naivebayes)
+library(yardstick)
+
+# ==== 1. Cargar datos ====
+stories <- read_csv("~/SP-Ghostbusters/paranormal_stories_final.csv")
+
+# ==== 2. Tokenizar y limpiar ====
+data("stop_words")
+
+stories_tokens <- stories %>%
+  unnest_tokens(word, descripcion) %>%
+  anti_join(stop_words, by = "word") %>%
+  filter(!str_detect(word, "^[0-9]+$")) %>%
+  filter(str_length(word) >= 3)
+
+# ==== 3. Reducir vocabulario ====
+word_counts <- stories_tokens %>%
+  count(word, sort = TRUE)
+
+words_to_keep <- word_counts %>%
+  filter(n >= 5)
+
+stories_clean <- stories_tokens %>%
+  semi_join(words_to_keep, by = "word")
+
+# ==== 4. Crear row_id único en stories (1 por relato) ====
+stories <- stories %>%
+  mutate(row_id = row_number())
+
+# ==== 5. Unir row_id a cada token ====
+stories_clean_id <- stories_clean %>%
+  inner_join(stories %>% select(titulo, categoria, row_id),
+             by = c("titulo", "categoria"),
+             relationship = "many-to-many")
+
+# ==== 6. Construir DTM ====
+# Crear tabla de conteos documento–término
+doc_term <- stories_clean_id %>%
+  count(row_id, word, name = "n")
+
+# Construir DTM dispersa
+dtm <- doc_term %>%
+  cast_sparse(row_id, word, n)
+
+
+# ==== 7. Crear labels ====
+labels <- stories %>%
+  arrange(row_id) %>%
+  pull(categoria) %>%
+  factor()
+
+# Verificación
+cat("Filas de dtm:", nrow(dtm), "\n")
+cat("Longitud de labels:", length(labels), "\n")
+print(table(labels))
+
+# ==== 8. Filtrar categorías poco representadas ====
+tab <- table(labels)
+keep_classes <- names(tab[tab >= 20])  # cambia el umbral si quieres
+keep_idx <- labels %in% keep_classes
+
+dtm_filt <- dtm[keep_idx, ]
+labels_filt <- factor(labels[keep_idx])
+
+cat("Dimensiones filtradas:", dim(dtm_filt), "\n")
+print(table(labels_filt))
+```
+
