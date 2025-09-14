@@ -8,8 +8,8 @@ author:
 date: today
 lang: es
 abstract: |
- Aquí va el abstract
-keywords: ["keywords"]
+ Este proyecto implementa un clasificador Naïve Bayes para categorizar relatos de fenómenos paranormales recopilados de la plataforma Your Ghost Stories en internte. Se construyó una base de datos aplicando web scraping que incluye título, lugar, categoría y descripción de cada historia. Se llevó a cabo un procesamiento de los textos mediante un análisis del lenguaje natural y fueron representados en una matriz basada en la frecuencia de las palabras. Con estos datos se entrenaron y evaluaron clasificadores Naïve Bayes en diferentes escenarios, realizando ajustes de Laplace smoothing, distribución Poisson y validación cruzada. Se pretende que con los resultados sea posible simplificar la clasificación dentro del análisis de textos de manera automatizada, así como plantearlo con diversos enfoques de distintas área.
+keywords: ["web scrapping", "clasificador Naïve Bayes","Natural Language Processing", "modelado probabilístico"]
 
 execute:
   echo: false       
