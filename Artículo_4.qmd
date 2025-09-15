@@ -138,6 +138,67 @@ Además de eliminar stopwords y palabras poco informativas, se realizó un filtr
 
 # Aplicación
 
+## 1. Entrenamiento de clasificador naïve Bayes
+
+Para la primera aproximación se dividió la base en 70% entrenamiento y 30% prueba. Se entrenó un **Naïve Bayes Multinomial** (Laplace = 1) sobre la matriz documento–término (`dtm_filt`) y las etiquetas (`labels_filt`). La matriz resultó altamente dispersa (~99.9% de ceros), con dimensiones:  
+
+- Entrenamiento: 156,632 documentos × 15,815 términos  
+- Prueba: 67,128 documentos × 15,815 términos  
+
+La matriz de confusión (omitida por extensión) mostró que la mayoría de las predicciones se concentraron en unas pocas clases frecuentes, dejando a la mayoría de las categorías sin representación adecuada.
+
+**Métricas globales (multiclase, macro):**
+
+| Métrica              | Valor  |
+|----------------------|:------:|
+| Exactitud (Accuracy) | 0.0498 |
+| Precisión macro      | 0.0491 |
+| Recall macro         | 0.0503 |
+| F1 macro             | 0.0848 |
+
+El desempeño del modelo fue bajo, con una capacidad limitada para distinguir entre más de veinte categorías temáticas. Esto sugiere que, aunque el Naïve Bayes multinomial es eficiente en textos, la gran cantidad de clases y la dispersión del vocabulario afectan su desempeño.
+
+---
+
+## 2. Ajuste de clasificador
+
+En un segundo intento se entrenó un **Naïve Bayes clásico** (Laplace = 1) pero utilizando únicamente las 500 palabras más frecuentes del conjunto de entrenamiento. Esta reducción de dimensionalidad buscó simplificar el modelo y eliminar ruido.
+
+La nueva matriz de confusión confirmó el mismo patrón de concentración en unas pocas clases, aunque con menor complejidad computacional.
+
+Solo tres columnas de predicción tienen conteos distintos de cero:  
+- **A Haunted Life**
+- **Psychic / Medium**
+- **Shadow People**.  
+
+Todas las demás columnas de clase predicha son 0 en todas las filas.
+
+| Reference (clase real)                              | Pred: A Haunted Life | Pred: Psychic / Medium | Pred: Shadow People |
+|-----------------------------------------------------|---------------------:|-----------------------:|-------------------:|
+| A Haunted Life                                      | 824                  | 668                    | 2060               |
+| Apparitions / Voices / Touches                      | 824                  | 668                    | 2060               |
+| Children Who See Spirits                            | 824                  | 668                    | 2060               |
+| Demons / Possessions / Exorcisms                    | 824                  | 668                    | 2060               |
+| Family / Friends Visits                             | 824                  | 668                    | 2060               |
+| Ghost Hunting                                       | 824                  | 668                    | 2060               |
+| Ghost Tours & Haunted Hotels                        | 824                  | 668                    | 2060               |
+| Haunted Items                                       | 824                  | 668                    | 2060               |
+| Haunted Places                                      | 824                  | 668                    | 2060               |
+| Misc                                                | 824                  | 668                    | 2060               |
+| Non Human Entities                                  | 738                  | 615                    | 1923               |
+| Old Hags / Night Attacks / Sleep Paralysis          | 713                  | 582                    | 1853               |
+| Orbs / Lights / Mists                               | 713                  | 582                    | 1853               |
+| Ouija Board / Seances                               | 713                  | 582                    | 1853               |
+| Pets / Animals                                      | 713                  | 582                    | 1853               |
+| Photographs / Videos / EVP                          | 713                  | 582                    | 1853               |
+| Poltergeists / Physical Manifestations              | 713                  | 582                    | 1853               |
+| Psychic / Medium                                    | 713                  | 582                    | 1853               |
+| Shadow People                                       | 713                  | 582                    | 1853               |
+| Succubus / Incubus / Sexual Ghosts                  | 713                  | 582                    | 1853               |
+
+Fuera de estas tres columnas de predicción, **todas las demás clases predichas presentan 0** en cada fila de la matriz.
+
+
 # Resultados
 
 # Conclusiones
