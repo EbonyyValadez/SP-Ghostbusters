@@ -41,7 +41,6 @@ format:
     tbl-cap-location: top
 ---
 
-
 # Introducción
 
 Para lograr un análisis automatizado de texto, es necesario incorporar técnicas de procesamiento de lenguaje natural (NLP), entendido como un campo que “se ocupa de cómo las computadoras entienden, procesan y manipulan los lenguajes humanos, utilizando métodos estadísticos, aprendizaje automático, redes neuronales y minería de texto” (Network of the National Library of Medicine, 2022). En este proyecto, dichas técnicas son aplicadas con el objetivo de clasificar relatos de fenómenos paranormales que fueron obtenidos mediante web scraping del portal Your Ghost Stories e incorporados a una base de datos.
@@ -60,10 +59,10 @@ La extracción se realizó con `rvest` y `httr`, identificando los elementos HTM
 
 El conjunto de datos final se estructuró con las siguientes variables mínimas:
 
-- `titulo`: encabezado del relato.
-- `descripcion`: texto principal del relato.
-- `categoria`: tipo de evento paranormal según taxonomía del sitio.
-- `lugar`: ubicación asociada al relato (cuando estuvo disponible).
+-   `titulo`: encabezado del relato.
+-   `descripcion`: texto principal del relato.
+-   `categoria`: tipo de evento paranormal según taxonomía del sitio.
+-   `lugar`: ubicación asociada al relato (cuando estuvo disponible).
 
 El dataset se almacenó en formato **CSV**, lo que facilita su posterior lectura y procesamiento reproducible en R.
 
@@ -71,9 +70,9 @@ El dataset se almacenó en formato **CSV**, lo que facilita su posterior lectura
 
 Para preparar el corpus, se utilizaron `tidytext`, `stringr`, `dplyr` y `tidyr`:
 
-1. **Tokenización**: transformación de la columna `descripcion` a unidades léxicas (palabras).
-2. **Depuración**: eliminación de *stopwords* (en inglés) y filtrado de tokens no informativos (p. ej., secuencias numéricas).
-3. **Normalización básica**: conversión a minúsculas y saneamiento ligero de caracteres, manteniendo la semántica original.
+1.  **Tokenización**: transformación de la columna `descripcion` a unidades léxicas (palabras).
+2.  **Depuración**: eliminación de *stopwords* (en inglés) y filtrado de tokens no informativos (p. ej., secuencias numéricas).
+3.  **Normalización básica**: conversión a minúsculas y saneamiento ligero de caracteres, manteniendo la semántica original.
 
 Este preprocesamiento generó un corpus “limpio” apto para el análisis exploratorio y semántico.
 
@@ -81,25 +80,59 @@ Este preprocesamiento generó un corpus “limpio” apto para el análisis expl
 
 Se calcularon **frecuencias de palabras** a nivel global y por `categoria`, con el objetivo de identificar léxico recurrente y patrones narrativos. Las principales distribuciones se visualizaron mediante gráficos de barras (palabras más frecuentes en el total y top-k por categoría), lo que permitió contrastar temáticas y vocabulario dominante entre tipos de fenómenos.
 
+#### Palabras más frecuentes en los relatos 
+
+![Figura 1. Palabras más frecuentes en relatos](palabras_frecuentes.png){fig-align="center"}
+
+La gráfica presenta las 20 palabras más frecuentes en los relatos paranormales analizados. Se observa que términos como *house*, *story* y *time* destacan como los más repetidos, lo que sugiere que muchos relatos están ambientados en el hogar y giran en torno a experiencias personales narradas en forma de historia.
+
+#### Top palabras por categoría
+
+![**Figura 2.** Top 10 palabras más frecuentes por categoría.\
+Cada panel muestra las 10 palabras más repetidas en los relatos correspondientes a cada categoría temática.](top_palabras_por_categoria.png){fig-align="center"}
+
+La figura muestra las 10 palabras más frecuentes en cada categoría de relatos paranormales. Se observa que, aunque algunos términos como *house*, *story* y *night* aparecen de manera recurrente en distintas categorías, cada temática también presenta vocablos característicos. Esto refleja cómo las experiencias narradas se diferencian según el tipo de fenómeno, pero mantienen un vocabulario común asociado a escenarios, tiempos y personajes frecuentes en este tipo de relatos.
+
 ## 5. Análisis de sentimientos
 
 Para caracterizar la **carga emocional** del corpus se integraron tres lexicones:
 
-- **NRC**: asigna emociones básicas (p. ej., miedo, tristeza, alegría, sorpresa).
-- **Bing**: clasifica polaridad (positiva/negativa).
-- **AFINN**: asigna puntajes enteros de intensidad (negativa a positiva).
+-   **NRC**: asigna emociones básicas (p. ej., miedo, tristeza, alegría, sorpresa).
+-   **Bing**: clasifica polaridad (positiva/negativa).
+-   **AFINN**: asigna puntajes enteros de intensidad (negativa a positiva).
 
-La unión léxica (join por `word`) permitió:
-- Estimar la **distribución de emociones** por `categoria` (NRC).
-- Cuantificar la **polaridad** (Bing) y la **intensidad** global por relato (AFINN), obteniendo para este último una suma de puntajes por `titulo`.  
+La unión léxica (join por `word`) permitió: - Estimar la **distribución de emociones** por `categoria` (NRC). - Cuantificar la **polaridad** (Bing) y la **intensidad** global por relato (AFINN), obteniendo para este último una suma de puntajes por `titulo`.\
 Los resultados se representaron con gráficos de barras y un histograma de puntajes AFINN para explorar la dispersión afectiva entre historias.
 
-## 6. Limitaciones
+#### Emociones más frecuentes 
 
-- La extracción depende de la **estructura HTML** del sitio; cambios en el marcado podrían requerir ajustes en los selectores.
-- La calidad de `lugar` y `categoria` está condicionada a la forma de publicación y a la **disponibilidad** de metadatos.
-- Los métodos léxicos de sentimientos (NRC, Bing, AFINN) no capturan **ironía, negación compleja** ni **dependencias contextuales**; por tanto, los resultados deben interpretarse como aproximaciones exploratorias.
+![**Figura 3.** Emociones más frecuentes en relatos paranormales.\
+Cada panel muestra las cinco emociones más mencionadas dentro de cada categoría de relatos, destacando la prevalencia de sentimientos negativos como miedo y tristeza, junto con otros como sorpresa o anticipación.](figuras/sentimientos_por_categoria.png){width="100%" fig-align="center"}
 
+La figura muestra las emociones más frecuentes en los relatos paranormales, clasificadas por categoría. Se observa que, aunque cada tipo de relato presenta matices distintos, las emociones predominantes tienden a repetirse entre categorías, reflejando sentimientos de miedo, sorpresa y tristeza. Estos resultados sugieren que las narrativas paranormales, independientemente de la temática, despiertan un conjunto común de respuestas emocionales en los narradores.
+
+#### Distribución AFINN
+
+![**Figura 4.** Distribución de puntajes AFINN en relatos paranormales.\
+La mayoría de los relatos presentan un puntaje cercano a cero, lo que refleja una tendencia hacia la neutralidad, aunque también aparecen relatos con cargas emocionales más negativas o positivas.](figuras/distribucion_afinn.png){width="70%" fig-align="center"}
+
+La figura muestra la distribución de los puntajes AFINN calculados a partir de los relatos paranormales. La mayoría de los valores se concentran alrededor de 0, lo que indica que los relatos tienden a tener una carga emocional relativamente neutra en conjunto. Sin embargo, también se observa una dispersión hacia valores negativos y positivos, lo que refleja la coexistencia de narrativas con emociones tanto desfavorables (miedo, tristeza) como favorables (esperanza, alivio).
+
+## 6. Matriz dispersa 
+
+### Construcción de la matriz documento-término
+
+Para poder aplicar técnicas de minería de texto y modelado probabilístico, fue necesario transformar los relatos recopilados en una representación numérica adecuada. Con este propósito se construyó una **matriz documento-término (DTM)**, en la cual cada fila corresponde a un relato y cada columna representa una palabra única del vocabulario obtenido tras el preprocesamiento.
+
+El procedimiento seguido fue, primero que nada descomponer las descripciones en tokens `unnest_tokens()` para después eliminar palabras reduntantes, signos de puntuación, números y palabras con escasa frecuencia utilizando la librería `tidytext`. Posteriormente, se calculó la frecuencia absoluta de cada palabra dentro de cada relato. Este proceso corresponde a un **count vectorizer**, donde se transforma el texto en vectores numéricos que representan la ocurrencia de cada término.
+
+Para la matriz dispersa (sparse matrix), se organizaron los resultados de las frecuencias, debido a la gran cantidad de términos posibles frente al reducido número de palabras presentes en cada relato. En esta estructura, la mayoría de las celdas permanecen en cero, lo que optimiza el almacenamiento y la eficiencia computacional. Finalmente, a cada fila de la matriz se le asoció la categoría correspondiente al tipo de evento paranormal, de modo que la matriz no solo represente las características textuales, sino también la etiqueta de clase necesaria para entrenar los clasificadores.
+
+## 7. Limitaciones
+
+-   La extracción depende de la **estructura HTML** del sitio; cambios en el marcado podrían requerir ajustes en los selectores.
+-   La calidad de `lugar` y `categoria` está condicionada a la forma de publicación y a la **disponibilidad** de metadatos.
+-   Los métodos léxicos de sentimientos (NRC, Bing, AFINN) no capturan **ironía, negación compleja** ni **dependencias contextuales**; por tanto, los resultados deben interpretarse como aproximaciones exploratorias.
 
 # Aplicación
 
@@ -109,4 +142,8 @@ Los resultados se representaron con gráficos de barras y un histograma de punta
 
 # Referencias
 
-National Network of Libraries of Medicine. (2022, junio). Natural language processing (NLP). NNLM Data Glossary. https://www.nnlm.gov/guides/data-glossary/natural-language-processing
+*He replied / she cried: Text mining and gender roles.* En STA 199. <https://sta199-f22-1.github.io/ae/ae-21-jane-austen-A.html>
+
+National Network of Libraries of Medicine. (2022). *Natural language processing (NLP)*. NNLM Data Glossary. https://www.nnlm.gov/guides/data-glossary/natural-language-processing
+
+Matrix R Package Development Team. (s.f.). *sparseMatrix: General Sparse Matrix Construction from Nonzero Entries*. CRAN R Project. <https://cran.r-project.org/web/packages/Matrix/Matrix.pdf>
