@@ -227,6 +227,30 @@ Lo cual muestra cómo el modelo predice en la mayoría de los casos la clase "Ot
 
 ## 5. Técnica Laplace smoothing
 
+Laplace smoothing es una técnica que se emplea para **ajustar las probabilidades** en modelos como Naïve Bayes y así evitar que una probabilidad se vuelva cero, tal como en este caso cuando una palabra no aparece en el conjunto que se utilizó para entrenar. Esta técnica tiene como objetivo garantizar que todo término tenga una probabilidad mínima, haciendo de esta forma al modelo más robusto frente a eventos no comunes o no observados.
+
+Se evaluó el efecto del parámetro de suavizamiento de Laplace probando valores de α = 0.5, 1, 2 y 3, así como también se realizó la validación cruzada con 5 folds e indicó que el mejor desempeño se alcanzó con α = 0.5, obteniendo una accuracy promedio cercana al 94%. De igual forma, se observó cómo **valores más altos redujeron la precisión del modelo**. 
+
+Evaluación inicial:
+
+| Valor de α (Laplace) | Accuracy  |
+|----------------------|:---------:|
+| 0.5                  | 0.9471    |
+| 1.0                  | 0.9423    |
+| 2.0                  | 0.9342    |
+| 3.0                  | 0.9298    |
+
+Evaluación luego del cross validation:
+
+| Valor de α (Laplace) | Accuracy  |
+|----------------------|:---------:|
+| 0.5                  | 0.9376    |
+| 1.0                  | 0.9320    |
+| 2.0                  | 0.9295    |
+| 3.0                  | 0.9306    |
+
+
+Estos resultados confirman que la selección de un parámetro de suavizamiento adecuado es fundamental para mejorar el accuracy del clasificador y que el modelo resulte útil para categorizar los eventos.
 
 
 # Conclusiones
@@ -238,3 +262,5 @@ Lo cual muestra cómo el modelo predice en la mayoría de los casos la clase "Ot
 National Network of Libraries of Medicine. (2022). *Natural language processing (NLP)*. NNLM Data Glossary. https://www.nnlm.gov/guides/data-glossary/natural-language-processing
 
 Matrix R Package Development Team. (s.f.). *sparseMatrix: General Sparse Matrix Construction from Nonzero Entries*. CRAN R Project. <https://cran.r-project.org/web/packages/Matrix/Matrix.pdf>
+
+Jayaswal, V. (2020, noviembre 22). Laplace smoothing in Naive Bayes algorithm. Towards Data Science. https://towardsdatascience.com/laplace-smoothing-in-naive-bayes-algorithm-9c237a8bdece
