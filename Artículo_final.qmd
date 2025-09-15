@@ -8,7 +8,7 @@ author:
 date: today
 lang: es
 abstract: |
- Este proyecto implementa un clasificador Naïve Bayes para categorizar relatos de fenómenos paranormales recopilados de la plataforma Your Ghost Stories en internte. Se construyó una base de datos aplicando web scraping que incluye título, lugar, categoría y descripción de cada historia. Se llevó a cabo un procesamiento de los textos mediante un análisis del lenguaje natural y fueron representados en una matriz basada en la frecuencia de las palabras. Con estos datos se entrenaron y evaluaron clasificadores Naïve Bayes en diferentes escenarios, realizando ajustes de Laplace smoothing, distribución Poisson y validación cruzada. Se pretende que con los resultados sea posible simplificar la clasificación dentro del análisis de textos de manera automatizada, así como plantearlo con diversos enfoques de distintas área.
+ Este proyecto explora la clasificación automática de relatos paranormales extraídos mediante web scraping de Your Ghost Stories. Se procesó el texto aplicando técnicas básicas de NLP y se representó en una matriz de términos. Se evaluó el desempeño de distintos modelos Naïve Bayes (ajustes de Laplace y Poisson) en escenarios multiclase y binarios. Los resultados revelan la importancia de abordar el desbalance y la dimensionalidad para mejorar la clasificación automática de textos en este tipo de corpus.
 keywords: ["web scrapping", "clasificador Naïve Bayes","Natural Language Processing", "modelado probabilístico"]
 
 execute:
@@ -49,13 +49,13 @@ Con los textos recolectados se realizó una matriz basada en las frecuencias de 
 
 # Metodología
 
-## 1. Recolección de datos
+## Recolección de datos
 
 La información se obtuvo mediante **web scraping** del portal *Your Ghost Stories*, que concentra relatos de experiencias paranormales reportadas por usuarios en distintos contextos geográficos. Antes de la extracción se verificó el cumplimiento de las políticas del sitio utilizando el paquete `robotstxt` de R, comprobando que las rutas de interés estuvieran habilitadas para el acceso automatizado.
 
 La extracción se realizó con `rvest` y `httr`, identificando los elementos HTML que contienen el **título** y la **descripción** de cada historia. Para ampliar la cobertura, se implementó una función iterativa que recorrió múltiples páginas (con control de paginación) y combinó dimensiones nativas del sitio: **categorías temáticas** (p. ej., avistamientos, posesiones, figuras sombrías) y **ubicaciones** (p. ej., estados de EE. UU.). Se incluyó un retardo entre solicitudes (`delay`) y un encabezado de agente de usuario para un acceso respetuoso al servidor. El resultado de cada iteración se consolidó en un archivo `.csv`.
 
-## 2. Estructura del conjunto de datos
+## Estructura del conjunto de datos
 
 El conjunto de datos final se estructuró con las siguientes variables mínimas:
 
@@ -66,7 +66,7 @@ El conjunto de datos final se estructuró con las siguientes variables mínimas:
 
 El dataset se almacenó en formato **CSV**, lo que facilita su posterior lectura y procesamiento reproducible en R.
 
-## 3. Procesamiento y limpieza de texto
+## Procesamiento y limpieza de texto
 
 Para preparar el corpus, se utilizaron `tidytext`, `stringr`, `dplyr` y `tidyr`:
 
@@ -76,24 +76,23 @@ Para preparar el corpus, se utilizaron `tidytext`, `stringr`, `dplyr` y `tidyr`:
 
 Este preprocesamiento generó un corpus “limpio” apto para el análisis exploratorio y semántico.
 
-## 4. Análisis exploratorio de texto
+## Análisis exploratorio de texto
 
 Se calcularon **frecuencias de palabras** a nivel global y por `categoria`, con el objetivo de identificar léxico recurrente y patrones narrativos. Las principales distribuciones se visualizaron mediante gráficos de barras (palabras más frecuentes en el total y top-k por categoría), lo que permitió contrastar temáticas y vocabulario dominante entre tipos de fenómenos.
 
-#### Palabras más frecuentes en los relatos 
+### Palabras más frecuentes en los relatos 
 
-![Figura 1. Palabras más frecuentes en relatos](palabras_frecuentes.png){fig-align="center"}
+![Palabras más frecuentes en relatos](palabras_frecuentes.png){width="60%" height="250px" fig-align="center"}
 
 La gráfica presenta las 20 palabras más frecuentes en los relatos paranormales analizados. Se observa que términos como *house*, *story* y *time* destacan como los más repetidos, lo que sugiere que muchos relatos están ambientados en el hogar y giran en torno a experiencias personales narradas en forma de historia.
 
-#### Top palabras por categoría
+### Top palabras por categoría
 
-![**Figura 2.** Top 10 palabras más frecuentes por categoría.\
-Cada panel muestra las 10 palabras más repetidas en los relatos correspondientes a cada categoría temática.](top_palabras_por_categoria.png){fig-align="center"}
+![Top 10 palabras más frecuentes por categoría.Cada panel muestra las 10 palabras más repetidas en los relatos correspondientes a cada categoría temática.](top_palabras_por_categoria.png){width="70%" fig-align="center"}
 
 La figura muestra las 10 palabras más frecuentes en cada categoría de relatos paranormales. Se observa que, aunque algunos términos como *house*, *story* y *night* aparecen de manera recurrente en distintas categorías, cada temática también presenta vocablos característicos. Esto refleja cómo las experiencias narradas se diferencian según el tipo de fenómeno, pero mantienen un vocabulario común asociado a escenarios, tiempos y personajes frecuentes en este tipo de relatos.
 
-## 5. Análisis de sentimientos
+## Análisis de sentimientos
 
 Para caracterizar la **carga emocional** del corpus se integraron tres lexicones:
 
@@ -104,21 +103,19 @@ Para caracterizar la **carga emocional** del corpus se integraron tres lexicones
 La unión léxica (join por `word`) permitió: - Estimar la **distribución de emociones** por `categoria` (NRC). - Cuantificar la **polaridad** (Bing) y la **intensidad** global por relato (AFINN), obteniendo para este último una suma de puntajes por `titulo`.\
 Los resultados se representaron con gráficos de barras y un histograma de puntajes AFINN para explorar la dispersión afectiva entre historias.
 
-#### Emociones más frecuentes 
+### Emociones más frecuentes 
 
-![**Figura 3.** Emociones más frecuentes en relatos paranormales.\
-Cada panel muestra las cinco emociones más mencionadas dentro de cada categoría de relatos, destacando la prevalencia de sentimientos negativos como miedo y tristeza, junto con otros como sorpresa o anticipación.](figuras/sentimientos_por_categoria.png){width="100%" fig-align="center"}
+![Emociones más frecuentes en relatos paranormales.Cada panel muestra las cinco emociones más mencionadas dentro de cada categoría de relatos, destacando la prevalencia de sentimientos negativos como miedo y tristeza, junto con otros como sorpresa o anticipación.](sentimientos_por_categoria.png){width="60%" height="250px" fig-align="center""}
 
 La figura muestra las emociones más frecuentes en los relatos paranormales, clasificadas por categoría. Se observa que, aunque cada tipo de relato presenta matices distintos, las emociones predominantes tienden a repetirse entre categorías, reflejando sentimientos de miedo, sorpresa y tristeza. Estos resultados sugieren que las narrativas paranormales, independientemente de la temática, despiertan un conjunto común de respuestas emocionales en los narradores.
 
-#### Distribución AFINN
+### Distribución AFINN
 
-![**Figura 4.** Distribución de puntajes AFINN en relatos paranormales.\
-La mayoría de los relatos presentan un puntaje cercano a cero, lo que refleja una tendencia hacia la neutralidad, aunque también aparecen relatos con cargas emocionales más negativas o positivas.](figuras/distribucion_afinn.png){width="70%" fig-align="center"}
+![Distribución de puntajes AFINN en relatos paranormales.La mayoría de los relatos presentan un puntaje cercano a cero, lo que refleja una tendencia hacia la neutralidad, aunque también aparecen relatos con cargas emocionales más negativas o positivas.](distribucion_afinn.png){width="60%" height="250px" fig-align="center"}
 
 La figura muestra la distribución de los puntajes AFINN calculados a partir de los relatos paranormales. La mayoría de los valores se concentran alrededor de 0, lo que indica que los relatos tienden a tener una carga emocional relativamente neutra en conjunto. Sin embargo, también se observa una dispersión hacia valores negativos y positivos, lo que refleja la coexistencia de narrativas con emociones tanto desfavorables (miedo, tristeza) como favorables (esperanza, alivio).
 
-## 6. Matriz dispersa 
+## Matriz dispersa 
 
 ### Construcción de la matriz documento-término
 
@@ -130,7 +127,7 @@ Para la matriz dispersa (sparse matrix), se organizaron los resultados de las fr
 
 Además de eliminar stopwords y palabras poco informativas, se realizó un filtrado léxico sencillo al descartar aquellos términos que aparecían en menos de cinco relatos, con el objetivo de reducir el ruido y el tamaño del vocabulario. Si bien se experimentó de manera exploratoria con criterios más estrictos de filtrado por frecuencia relativa (proporción de documentos) y con la transformación TF-IDF, finalmente el modelo se ajustó únicamente usando la matriz de conteo simple, ya que ni los filtros adicionales ni la ponderación TF-IDF ofrecieron mejoras relevantes en el desempeño sobre este conjunto de datos. A pesar de estos intentos, se observó que el clasificador Naïve Bayes no era capaz de distinguir de manera efectiva entre todas las categorías presentes en el conjunto original: la matriz de confusión resultante mostraba que, al incluir todas las clases, el modelo tendía a predecir únicamente unas pocas, dejando el resto prácticamente sin aciertos, independientemente del filtrado realizado. Por esta razón, la opción de reducir la tarea a 3-5 clases principales solo se implementó como experimento exploratorio, pero en el análisis principal se mantuvo el enfoque multiclase.
 
-## 7. Limitaciones
+## Limitaciones
 
 -   La extracción depende de la **estructura HTML** del sitio; cambios en el marcado podrían requerir ajustes en los selectores.
 -   La calidad de `lugar` y `categoria` está condicionada a la forma de publicación y a la **disponibilidad** de metadatos.
@@ -138,7 +135,7 @@ Además de eliminar stopwords y palabras poco informativas, se realizó un filtr
 
 # Aplicación y resultados de diferentes modelos
 
-## 1. Entrenamiento de clasificador naïve Bayes
+## Entrenamiento de clasificador naïve Bayes
 
 Para la primera aproximación se dividió la base en 70% entrenamiento y 30% prueba. Se entrenó un **Naïve Bayes Multinomial** (Laplace = 1) sobre la matriz documento–término (`dtm_filt`) y las etiquetas (`labels_filt`). La matriz resultó altamente dispersa (~99.9% de ceros), con dimensiones:  
 
@@ -158,9 +155,9 @@ La matriz de confusión (omitida por extensión) mostró que la mayoría de las 
 
 El desempeño del modelo fue bajo, con una capacidad limitada para distinguir entre más de veinte categorías temáticas. Esto sugiere que, aunque el Naïve Bayes multinomial es eficiente en textos, la gran cantidad de clases y la dispersión del vocabulario afectan su desempeño.
 
----
 
-## 2. Ajuste de clasificador
+
+## Ajuste de clasificador
 
 En un segundo intento se entrenó un **Naïve Bayes clásico** (Laplace = 1) pero utilizando únicamente las 500 palabras más frecuentes del conjunto de entrenamiento. Esta reducción de dimensionalidad buscó simplificar el modelo y eliminar ruido.
 
@@ -200,7 +197,7 @@ Fuera de estas tres columnas de predicción, **todas las demás clases predichas
 
 Esto confirma que, aunque la reducción de dimensionalidad disminuyó la complejidad, el modelo no logra discriminar entre la mayoría de las clases y concentra prácticamente todas las predicciones en tres categorías dominantes.
 
-## 3. Dicotimización en eventos de las variables
+## Dicotimización en eventos de las variables
 Con el objetivo de simplificar el problema de multiclase, se optó por dicotomizar los eventos en las variables (empleando la función **case_when**)y ahora se categorización consiste únicamente de pertenecer al grupo "Haunted places" o no pertenecer (siendo la opción "Other"). 
 
 Se reentrenaron ambos clasificadores (multinomial y naive_bayes()) en el **escenario binario** y los resultados fueron similares, aunque con ligeras variaciones en el número de aciertos en la clase minoritaria (“Haunted Places”). lo cual muestra que la simplificación binaria facilita el aprendizaje, pero no resuelve el problema de desbalance. A partir de este planteamiento se obtuvo un accuracy de más del 94%; sin embargo, se llegó a una precision de apenas 0.05 y un recall de 0.0051 para la clase minoritaria.
@@ -212,7 +209,7 @@ Se reentrenaron ambos clasificadores (multinomial y naive_bayes()) en el **escen
 | Recall macro         | 0.0051 |
 | F1 macro             | 0.0092 |
 
-## 4. Implementación de la distribución Poisson
+## Implementación de la distribución Poisson
 Resultando en una técnica más adecuada para conteos, se aplicó modelo que considera una distribución de Poisson (empleando **usepoisson = TRUE**), del cual se obtuvo un desempeño similar al modelo binario aplicado anteriormente, pero con una mejor en la detección de relatos pertenecientes a "Haunted places", aumentando los aciertos de 18 a 27 y mostrando cómo la distribución adaptada a Poisson mejoró el ajuste.
 
 La matriz de confusión obtenida de este modelo es la siguiente:
@@ -225,7 +222,7 @@ La matriz de confusión obtenida de este modelo es la siguiente:
 Lo cual muestra cómo el modelo predice en la mayoría de los casos la clase "Other"; no obstante, tiende a ignorar "Haunted Places", mostrando cómo **el clasificador se sesga a una clase** debido al desbalance esntre éstas. Si lo que se pretende es detectar "Haunted places", el modelo no es de mucha utilidad.
 
 
-## 5. Técnica Laplace smoothing
+## Técnica Laplace smoothing
 
 Laplace smoothing es una técnica que se emplea para **ajustar las probabilidades** en modelos como Naïve Bayes y así evitar que una probabilidad se vuelva cero, tal como en este caso cuando una palabra no aparece en el conjunto que se utilizó para entrenar. Esta técnica tiene como objetivo garantizar que todo término tenga una probabilidad mínima, haciendo de esta forma al modelo más robusto frente a eventos no comunes o no observados.
 
@@ -254,6 +251,8 @@ Estos resultados confirman que la selección de un parámetro de suavizamiento a
 
 
 # Conclusiones
+
+Los resultados del proyecto muestran que el clasificador Naïve Bayes, aplicado en este caso a relatos paranormales, presenta un rendimiento limitado en escenarios de multiclase debido a su alta dimensionalidad y el desbalance de categorías (lo cual ya se observó previamente que dirige a un sesgo). De igual forma, la simplificación binaria ("Haunted Places" vs "Other") mejora la exactitud global, pero mantiene baja sensibilidad hacia la clase minoritaria, y tiende a ser un modelo que se ajusta más a clasificar en la categoría de "Other". Asimismo, ajustes como la distribución de Poisson y el suavizamiento de Laplace aportan mejoras en los clasificadores, confirmando la importancia de una correcta selección de parámetros, pues eran notorios los cambios en los resultados cuando estos variaban. En conclusión, la aplicación de los distintos modelos demuestra tanto la utilidad del enfoque probabilístico, así como sus limitaciones ante diversos escenarios y las bases datos, al igual que abre la puerta a futuras investigaciones que incorporen técnicas de re-muestreo y modelos más complejos para abordar el sesgo y los errores de clasificación en textos extensos y desbalanceados.
 
 # Referencias
 
