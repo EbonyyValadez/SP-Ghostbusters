@@ -198,6 +198,7 @@ Todas las demás columnas de clase predicha son 0 en todas las filas.
 
 Fuera de estas tres columnas de predicción, **todas las demás clases predichas presentan 0** en cada fila de la matriz.
 
+Esto confirma que, aunque la reducción de dimensionalidad disminuyó la complejidad, el modelo no logra discriminar entre la mayoría de las clases y concentra prácticamente todas las predicciones en tres categorías dominantes.
 
 # Resultados
 
