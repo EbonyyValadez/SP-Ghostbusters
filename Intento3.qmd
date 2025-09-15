@@ -1,0 +1,273 @@
+---
+title: "Matriz"
+format: html
+editor: visual
+---
+
+## Matriz
+
+```{r}
+# ==== LIBRERÍAS ====
+library(readr)
+library(dplyr)
+library(tidytext)
+library(stringr)
+library(Matrix)
+library(caret)
+library(naivebayes)
+library(yardstick)
+
+# ==== 1. Cargar datos ====
+stories <- read_csv("paranormal_stories_final.csv")
+
+# ==== 2. Tokenizar y limpiar ====
+data("stop_words")
+
+stories_tokens <- stories %>%
+  unnest_tokens(word, descripcion) %>%
+  anti_join(stop_words, by = "word") %>%
+  filter(!str_detect(word, "^[0-9]+$")) %>%
+  filter(str_length(word) >= 3)
+
+# ==== 3. Reducir vocabulario ====
+word_counts <- stories_tokens %>%
+  count(word, sort = TRUE)
+
+words_to_keep <- word_counts %>%
+  filter(n >= 5)
+
+stories_clean <- stories_tokens %>%
+  semi_join(words_to_keep, by = "word")
+
+# ==== 4. Crear row_id único en stories (1 por relato) ====
+stories <- stories %>%
+  mutate(row_id = row_number())
+
+# ==== 5. Unir row_id a cada token ====
+stories_clean_id <- stories_clean %>%
+  inner_join(stories %>% select(titulo, categoria, row_id),
+             by = c("titulo", "categoria"),
+             relationship = "many-to-many")
+
+# ==== 6. Construir DTM ====
+# Crear tabla de conteos documento–término
+doc_term <- stories_clean_id %>%
+  count(row_id, word, name = "n")
+
+# Construir DTM dispersa
+dtm <- doc_term %>%
+  cast_sparse(row_id, word, n)
+
+
+# ==== 7. Crear labels ====
+labels <- stories %>%
+  arrange(row_id) %>%
+  pull(categoria) %>%
+  factor()
+
+# Verificación
+cat("Filas de dtm:", nrow(dtm), "\n")
+cat("Longitud de labels:", length(labels), "\n")
+print(table(labels))
+
+# ==== 8. Filtrar categorías poco representadas ====
+tab <- table(labels)
+keep_classes <- names(tab[tab >= 20])  # cambia el umbral si quieres
+keep_idx <- labels %in% keep_classes
+
+dtm_filt <- dtm[keep_idx, ]
+labels_filt <- factor(labels[keep_idx])
+
+cat("Dimensiones filtradas:", dim(dtm_filt), "\n")
+print(table(labels_filt))
+```
+
+```{r}
+# Train/Test Split y Multinomial NB
+library(tidymodels)
+set.seed(1234)
+
+split <- initial_split(data.frame(y = labels_filt), prop = 0.7)
+train_idx <- training(split) %>% rownames() %>% as.integer()
+test_idx  <- testing(split) %>% rownames() %>% as.integer()
+
+X_train <- dtm_filt[train_idx, ]
+X_test  <- dtm_filt[test_idx, ]
+y_train <- labels_filt[train_idx]
+y_test  <- labels_filt[test_idx]
+
+library(naivebayes)
+nb_model <- multinomial_naive_bayes(X_train, y_train, laplace = 1)
+y_pred <- predict(nb_model, X_test)
+
+cm <- table(Reference = y_test, Predicted = y_pred)
+cm
+```
+
+```{r}
+table(y_train)
+table(y_test)
+dim(X_train)
+dim(X_test)
+```
+
+```{r}
+mean(X_train == 0)
+```
+
+
+```{r}
+# Métricas multiclase
+accuracy <- sum(diag(cm)) / sum(cm)
+
+classes <- 1:nrow(cm)
+precision_i <- recall_i <- f1_i <- numeric(length(classes))
+
+for (i in classes) {
+  TP <- cm[i,i]
+  FP <- sum(cm[,i]) - TP
+  FN <- sum(cm[i,]) - TP
+  precision_i[i] <- ifelse((TP+FP)==0, NA, TP/(TP+FP))
+  recall_i[i]    <- ifelse((TP+FN)==0, NA, TP/(TP+FN))
+  f1_i[i]        <- ifelse(is.na(precision_i[i]+recall_i[i]), NA,
+                          2*precision_i[i]*recall_i[i]/(precision_i[i]+recall_i[i]))
+}
+
+precision_macro <- mean(precision_i, na.rm = TRUE)
+recall_macro    <- mean(recall_i, na.rm = TRUE)
+f1_macro        <- mean(f1_i, na.rm = TRUE)
+
+accuracy
+precision_macro
+recall_macro
+f1_macro
+
+```
+
+```{r}
+#  Naïve Bayes clásico
+col_sums <- Matrix::colSums(X_train)
+top_cols <- order(col_sums, decreasing = TRUE)[1:500]
+
+X_train_small <- as.data.frame(as.matrix(X_train[, top_cols]))
+X_test_small  <- as.data.frame(as.matrix(X_test[, top_cols]))
+
+model_nb2 <- naive_bayes(x = X_train_small, y = y_train, laplace = 1)
+y_pred2 <- predict(model_nb2, X_test_small)
+
+cm2 <- table(Reference = y_test, Predicted = y_pred2)
+cm2
+```
+
+```{r}
+# ==== Dicotomizar clases ====
+labels_bin <- dplyr::case_when(
+  labels_filt == "Haunted Places" ~ "Haunted Places",
+  TRUE ~ "Other"
+) |> factor()
+
+split_bin <- initial_split(data.frame(y = labels_bin), prop = 0.7)
+train_idx <- training(split_bin) %>% rownames() %>% as.integer()
+test_idx  <- testing(split_bin) %>% rownames() %>% as.integer()
+
+X_train_bin <- dtm_filt[train_idx, ]
+X_test_bin  <- dtm_filt[test_idx, ]
+y_train_bin <- labels_bin[train_idx]
+y_test_bin  <- labels_bin[test_idx]
+
+```
+
+```{r}
+# ==== Multinomial NB binario ====
+model_mult_bin <- multinomial_naive_bayes(X_train_bin, y_train_bin, laplace = 1)
+y_pred_mult <- predict(model_mult_bin, X_test_bin)
+cm_mult <- table(Reference = y_test_bin, Predicted = y_pred_mult)
+cm_mult
+
+# Métricas binario
+TP <- cm_mult["Haunted Places","Haunted Places"]
+FP <- cm_mult["Other","Haunted Places"]
+FN <- cm_mult["Haunted Places","Other"]
+TN <- cm_mult["Other","Other"]
+
+accuracy_bin <- (TP+TN)/(TP+TN+FP+FN)
+precision_bin <- TP/(TP+FP)
+recall_bin <- TP/(TP+FN)
+f1_bin <- 2*precision_bin*recall_bin/(precision_bin+recall_bin)
+
+accuracy_bin
+precision_bin
+recall_bin
+f1_bin
+
+```
+
+
+```{r}
+library(Matrix)
+library(naivebayes)
+
+# (1) Asegura clase y tipo numérico doble en esparso
+# Si X_train_bin es lógica/0-1, multiplica por 1.0 para volverla "double"
+X_train_sp <- as(X_train_bin * 1.0, "dgCMatrix")
+X_test_sp  <- as(X_test_bin  * 1.0, "dgCMatrix")
+
+# (opcional) saneo explícito del tipo del slot 'x'
+if (!is.double(X_train_sp@x)) storage.mode(X_train_sp@x) <- "double"
+if (!is.double(X_test_sp@x))  storage.mode(X_test_sp@x)  <- "double"
+
+# (2) Poisson Naive Bayes (no uses as.matrix)
+# Nota: Poisson es para CONTEOS; si tus X son 0/1 está bien pero quizá te convenga Bernoulli (abajo).
+model_pois <- poisson_naive_bayes(x = X_train_sp, y = y_train_bin, laplace = 1)
+
+# (3) Predicción en ESARSO + por lotes (para no forzar densificación interna)
+idx_list <- split(seq_len(nrow(X_test_sp)), ceiling(seq_along(seq_len(nrow(X_test_sp)))/10000))
+preds <- unlist(lapply(idx_list, function(ii) {
+  predict(model_pois, X_test_sp[ii, , drop = FALSE], type = "class")
+}))
+
+cm_pois <- table(Reference = y_test_bin, Predicted = preds)
+cm_pois
+
+
+
+```
+
+
+```{r}
+# Probar diferentes valores de Laplace
+for (lap in c(0.5, 1, 2, 3)) {
+  model_lap <- multinomial_naive_bayes(X_train_bin, y_train_bin, laplace = lap)
+  pred_lap <- predict(model_lap, X_test_bin)
+  cm_lap <- table(Reference = y_test_bin, Predicted = pred_lap)
+  acc_lap <- sum(diag(cm_lap))/sum(cm_lap)
+  cat("Laplace =", lap, "Accuracy =", acc_lap, "\n")
+}
+```
+
+
+```{r}
+# Cross-validation para Laplace 
+set.seed(123)
+K <- 5
+folds <- sample(rep(1:K, length.out = length(y_train_bin)))
+
+laps <- c(0.5, 1, 2, 3)
+cv_acc <- numeric(length(laps))
+
+for (j in seq_along(laps)) {
+  accs <- c()
+  for (k in 1:K) {
+    tr_idx <- which(folds != k)
+    te_idx <- which(folds == k)
+    model_cv <- multinomial_naive_bayes(X_train_bin[tr_idx, ], y_train_bin[tr_idx],
+                                        laplace = laps[j])
+    pred_cv <- predict(model_cv, X_train_bin[te_idx, ])
+    cm_cv <- table(Reference = y_train_bin[te_idx], Predicted = pred_cv)
+    accs[k] <- sum(diag(cm_cv))/sum(cm_cv)
+  }
+  cv_acc[j] <- mean(accs)
+}
+
+data.frame(Laplace = laps, CV_Accuracy = cv_acc)
+```
