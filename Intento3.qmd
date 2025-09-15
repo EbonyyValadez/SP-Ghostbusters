@@ -115,7 +115,6 @@ dim(X_test)
 mean(X_train == 0)
 ```
 
-
 ```{r}
 # Métricas multiclase
 accuracy <- sum(diag(cm)) / sum(cm)
@@ -202,7 +201,6 @@ f1_bin
 
 ```
 
-
 ```{r}
 library(Matrix)
 library(naivebayes)
@@ -233,7 +231,6 @@ cm_pois
 
 ```
 
-
 ```{r}
 # Probar diferentes valores de Laplace
 for (lap in c(0.5, 1, 2, 3)) {
@@ -244,7 +241,6 @@ for (lap in c(0.5, 1, 2, 3)) {
   cat("Laplace =", lap, "Accuracy =", acc_lap, "\n")
 }
 ```
-
 
 ```{r}
 # Cross-validation para Laplace 

@@ -136,7 +136,7 @@ Además de eliminar stopwords y palabras poco informativas, se realizó un filtr
 -   La calidad de `lugar` y `categoria` está condicionada a la forma de publicación y a la **disponibilidad** de metadatos.
 -   Los métodos léxicos de sentimientos (NRC, Bing, AFINN) no capturan **ironía, negación compleja** ni **dependencias contextuales**; por tanto, los resultados deben interpretarse como aproximaciones exploratorias.
 
-# Aplicación
+# Aplicación y resultados de diferentes modelos
 
 ## 1. Entrenamiento de clasificador naïve Bayes
 
@@ -200,7 +200,34 @@ Fuera de estas tres columnas de predicción, **todas las demás clases predichas
 
 Esto confirma que, aunque la reducción de dimensionalidad disminuyó la complejidad, el modelo no logra discriminar entre la mayoría de las clases y concentra prácticamente todas las predicciones en tres categorías dominantes.
 
-# Resultados
+## 3. Dicotimización en eventos de las variables
+Con el objetivo de simplificar el problema de multiclase, se optó por dicotomizar los eventos en las variables (empleando la función **case_when**)y ahora se categorización consiste únicamente de pertenecer al grupo "Haunted places" o no pertenecer (siendo la opción "Other"). 
+
+Se reentrenaron ambos clasificadores (multinomial y naive_bayes()) en el **escenario binario** y los resultados fueron similares, aunque con ligeras variaciones en el número de aciertos en la clase minoritaria (“Haunted Places”). lo cual muestra que la simplificación binaria facilita el aprendizaje, pero no resuelve el problema de desbalance. A partir de este planteamiento se obtuvo un accuracy de más del 94%; sin embargo, se llegó a una precision de apenas 0.05 y un recall de 0.0051 para la clase minoritaria.
+
+| Métrica              | Valor  |
+|----------------------|:------:|
+| Exactitud (Accuracy) | 0.9423 |
+| Precisión macro      | 0.0500 |
+| Recall macro         | 0.0051 |
+| F1 macro             | 0.0092 |
+
+## 4. Implementación de la distribución Poisson
+Resultando en una técnica más adecuada para conteos, se aplicó modelo que considera una distribución de Poisson (empleando **usepoisson = TRUE**), del cual se obtuvo un desempeño similar al modelo binario aplicado anteriormente, pero con una mejor en la detección de relatos pertenecientes a "Haunted places", aumentando los aciertos de 18 a 27 y mostrando cómo la distribución adaptada a Poisson mejoró el ajuste.
+
+La matriz de confusión obtenida de este modelo es la siguiente:
+
+| Reference       | Haunted Places | Other  |
+|-----------------|:--------------:|:------:|
+| Haunted Places  |      25        |  3527  |
+| Other           |      447       | 63129  |
+
+Lo cual muestra cómo el modelo predice en la mayoría de los casos la clase "Other"; no obstante, tiende a ignorar "Haunted Places", mostrando cómo **el clasificador se sesga a una clase** debido al desbalance esntre éstas. Si lo que se pretende es detectar "Haunted places", el modelo no es de mucha utilidad.
+
+
+## 5. Técnica Laplace smoothing
+
+
 
 # Conclusiones
 
