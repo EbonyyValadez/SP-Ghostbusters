@@ -1,0 +1,21 @@
+---
+title: "aplicación y resultados"
+format: html
+editor: visual
+---
+
+# Aplicación y resultados
+
+## 1. Entrenamiento de clasificador naïve Bayes
+
+
+## 2. Ajuste de clasificador
+
+## 3. Dicotimización en eventos de las variables
+Con el objetivo de simplificar el problema de multiclase, se optó por dicotomizar los eventos en las variables (empleando la función **case_when**)y ahora se categorización consiste únicamente de pertenecer al grupo "Haunted places" o no pertenecer (siendo la opción "Other"). 
+Se reentrenaron ambos clasificadores (multinomial y naive_bayes()) en el escenario binario y los resultados fueron similares, aunque con ligeras variaciones en el número de aciertos en la clase minoritaria (“Haunted Places”). lo cual muestra que la simplificación binaria facilita el aprendizaje, pero no resuelve el problema de desbalance. A partir de este planteamiento se obtuvo un accuracy de más del 94%; sin embargo, se llegó a una precision de apenas 0.05 y un recall de 0.005 para la clase minoritaria.
+
+## 4. Implementación de la distribución Poisson
+Resultando en una técnica más adecuada para conteos, se aplicó modelo que considera una distribución de Poisson (empleando **usepoisson = TRUE**), del cual se obtuvo un desempeño similar al modelo binario aplicado anteriormente, pero con una mejor en la detección de relatos pertenecientes a "Haunted places", aumentando los aciertos de 18 a 27 y mostrando cómo la distribución adaptada a Poisson mejoró el ajuste. 
+
+## 5. Técnica Laplace smoothing
